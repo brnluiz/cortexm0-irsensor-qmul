@@ -82,66 +82,28 @@ void PORTD_IRQHandler(void) {
 	    // Ok to clear all since this handler is for all of Port D
 }
 
-// Generate the next LED color
-int nextLedColor(int ledActualColor) {
-	ledActualColor++;
-	
-	if (ledActualColor > COLOR_BLUE) {
-		ledActualColor = 0;
-	}
-	
-	return ledActualColor;
-}
 
-
-// Generate the previous LED color
-int previousLedColor(int ledActualColor) {
-	ledActualColor--;
-	
-	if (ledActualColor < 0) {
-		ledActualColor = COLOR_BLUE;
-	}
-	
-	return ledActualColor;
-}
-
-// Task to cycle the LEDs
-__task void ledCycleTask(void) {
+// Task to feedback user click with LEDs
+__task void ledFeedbackTask(void) {
 	int ledColor = COLOR_RED;
-	int buttonPressed = 0;
-	int ledCycleActive = 1;
+	greenLEDOnOff(LED_OFF);
 	
 	while(1) {
-		turnOffAllLeds();
-		
-		// If the led cyle is meant to be active, then turn the right LEDs
-		if (ledCycleActive) {
-			switch (ledColor) {
-				case COLOR_RED:
-					redLEDOnOff   (LED_ON);
-					break;
-				case COLOR_GREEN:
-					greenLEDOnOff (LED_ON);
-					break;
-				case COLOR_BLUE:
-					blueLEDOnOff  (LED_ON);
-					break;
-			}
-
-			ledColor = nextLedColor(ledColor);
-		}
-		
-		// delay 3sec and wait for the button press
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, LED_TIMEOUT);  // wait for an event flag 0x0001
-
-		// If the button was pressed, then change the active state
-		if (buttonPressed == OS_R_EVT) {
-			ledCycleActive = !ledCycleActive;
-			
-			// If the pressed button reactivate the process, get the color previous to the stop click
-			if(ledCycleActive) {
-				ledColor = previousLedColor(ledColor);
-			}
+		// Wait for the user click
+		os_evt_wait_and (EVT_BTN_PRESSED, 0xFFFF);
+		switch (ledColor) {
+			case COLOR_RED:
+				redLEDOnOff   (LED_ON);
+				blueLEDOnOff  (LED_OFF);
+				
+				ledColor = COLOR_BLUE;
+				break;
+			case COLOR_BLUE:
+				redLEDOnOff  (LED_OFF);
+				blueLEDOnOff (LED_ON);
+				
+				ledColor = COLOR_RED;
+				break;
 		}
 		
 		// Discard pending notifications
@@ -172,7 +134,7 @@ __task void btnEventManagerTask(void) {
 	}
 }
 
-__task void beepTask(void) {
+__task void pwmTask(void) {
 	unsigned short volume = 0;
 	
 	while (1) {
@@ -185,16 +147,23 @@ __task void beepTask(void) {
 		}
 		
 		setPWMDuty(volume);
-		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_BEEP]);
+		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_PWM]);
+	}
+}
+
+__task void timerTask(void) {
+	while(1) {
+		PTA->PTOR |= MASK(TONE_POS);
+		os_dly_wait(TIMER_TIMEOUT);
 	}
 }
 
 __task void boot (void) {
-  t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);  // start button task
+  t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);   // start button task (input from the user)
 	
-	t_tasks[T_BEEP]  = os_tsk_create (beepTask, 0);        // start led task
-	t_tasks[T_LEDS]  = os_tsk_create (ledCycleTask, 0);    // start led task
-  
+	t_tasks[T_LEDS]  = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
+  t_tasks[T_PWM]   = os_tsk_create (pwmTask, 0);         // start pwm task (control the volume)
+	t_tasks[T_TIMER] = os_tsk_create (timerTask, 0);       // start timer task (generate the tone)
 	
 	os_tsk_delete_self ();
 }
