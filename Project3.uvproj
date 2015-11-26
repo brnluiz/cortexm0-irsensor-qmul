@@ -427,9 +427,44 @@
               <FilePath>.\src\main.c</FilePath>
             </File>
             <File>
-              <FileName>gpio_defs.h</FileName>
+              <FileName>Pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Pwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>Pwm.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\gpio_defs.h</FilePath>
+              <FilePath>.\src\Pwm.h</FilePath>
+            </File>
+            <File>
+              <FileName>Leds.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\Leds.h</FilePath>
+            </File>
+            <File>
+              <FileName>Leds.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Leds.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\SysTick.h</FilePath>
+            </File>
+            <File>
+              <FileName>GpioDefs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\GpioDefs.h</FilePath>
+            </File>
+            <File>
+              <FileName>Settings.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\Settings.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -866,9 +901,44 @@
               <FilePath>.\src\main.c</FilePath>
             </File>
             <File>
-              <FileName>gpio_defs.h</FileName>
+              <FileName>Pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Pwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>Pwm.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\gpio_defs.h</FilePath>
+              <FilePath>.\src\Pwm.h</FilePath>
+            </File>
+            <File>
+              <FileName>Leds.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\Leds.h</FilePath>
+            </File>
+            <File>
+              <FileName>Leds.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Leds.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\SysTick.h</FilePath>
+            </File>
+            <File>
+              <FileName>GpioDefs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\GpioDefs.h</FilePath>
+            </File>
+            <File>
+              <FileName>Settings.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\Settings.h</FilePath>
             </File>
           </Files>
         </Group>

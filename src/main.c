@@ -159,7 +159,7 @@ __task void timerTask(void) {
 }
 
 __task void boot (void) {
-  t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);   // start button task (input from the user)
+  t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);   // start button task
 	
 	t_tasks[T_LEDS]  = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
   t_tasks[T_PWM]   = os_tsk_create (pwmTask, 0);         // start pwm task (control the volume)
