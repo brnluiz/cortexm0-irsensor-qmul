@@ -1,0 +1,6 @@
+Flash
+*.uvgui*
+*.dep
+slprj/
+*.autosave
+~*
