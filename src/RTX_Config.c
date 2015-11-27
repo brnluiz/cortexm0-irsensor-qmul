@@ -79,7 +79,7 @@
 //   <i> Set the timer tick value for selected timer.
 //   <i> Default: 10000  (10ms)
 #ifndef OS_TICK
- #define OS_TICK        1000
+ #define OS_TICK        100
 #endif
 
 // </h>

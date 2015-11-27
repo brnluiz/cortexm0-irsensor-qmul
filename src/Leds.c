@@ -25,7 +25,6 @@ void initOutputLeds() {
 	// Set ports to outputs
 	PTB->PDDR |= MASK(RED_LED_POS) | MASK(GREEN_LED_POS);
 	PTD->PDDR |= MASK(BLUE_LED_POS);
-	PTB->PDDR |= MASK(OSCIL_POS) ;	
 
 	// Turn off LEDs
 	PTB->PSOR = MASK(RED_LED_POS) | MASK(GREEN_LED_POS);

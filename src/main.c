@@ -27,20 +27,24 @@ OS_TID t_evt_mngr;
 OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
 
 void initOutputTone() {
-	// Use the Port A2
-	
 	// Enable Clock
 	SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK;
+	SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
 	
 	// Make the pin as GPIO
 	PORTA->PCR[TONE_POS] &= ~PORT_PCR_MUX_MASK;
 	PORTA->PCR[TONE_POS] |= PORT_PCR_MUX(1);
 	
+	PORTB->PCR[TONE_TOOGLE_POS] &= ~PORT_PCR_MUX_MASK;
+	PORTB->PCR[TONE_TOOGLE_POS] |= PORT_PCR_MUX(1);
+	
 	// Set ports to outputs
 	PTA->PDDR |= MASK(TONE_POS) ;
+	PTB->PDDR |= MASK(TONE_TOOGLE_POS) ;
 	
-	// Turn off the LED
+	// Turn off
 	PTA->PCOR |= MASK(TONE_POS) ;
+	PTB->PCOR |= MASK(TONE_TOOGLE_POS) ;
 }
 
 /*----------------------------------------------------------------------------
@@ -134,36 +138,42 @@ __task void btnEventManagerTask(void) {
 	}
 }
 
-__task void pwmTask(void) {
-	unsigned short volume = 0;
-	
-	while (1) {
-		os_evt_wait_and (EVT_BTN_PRESSED, 0xFFFF);
+__task void toneTask(void) {
+	// Generate a square wave of 50 Hz (1ms tick, 2ms period)
+	while(1) {
+		PTB->PTOR |= MASK(TONE_TOOGLE_POS);
+		os_dly_wait(1);
 		
-		if (volume >= 128) {
-			volume = 0 ;
-		} else {
-			volume = volume + 8 ;
-		}
-		
-		setPWMDuty(volume);
-		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_PWM]);
+		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_TONE]);
 	}
 }
 
-__task void timerTask(void) {
+__task void toogleToneTask(void) {
+	int timeout = 1000;
+	int buttonPressed;
+	
 	while(1) {
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);  // wait for an event flag 0x0001
+		
+		if (buttonPressed == OS_R_EVT) {
+			if (timeout > 100)
+				timeout = timeout - 100;
+			else
+				timeout = 1000;
+		}
+		
 		PTA->PTOR |= MASK(TONE_POS);
-		os_dly_wait(TIMER_TIMEOUT);
+		
+		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_TOOGLER]);
 	}
 }
 
 __task void boot (void) {
   t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);   // start button task
 	
-	t_tasks[T_LEDS]  = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
-  t_tasks[T_PWM]   = os_tsk_create (pwmTask, 0);         // start pwm task (control the volume)
-	t_tasks[T_TIMER] = os_tsk_create (timerTask, 0);       // start timer task (generate the tone)
+	t_tasks[T_LEDS]    = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
+	t_tasks[T_TOOGLER] = os_tsk_create (toogleToneTask, 0);  // start timer task (generate the tone)
+	t_tasks[T_TONE]    = os_tsk_create (toneTask, 0);        // start timer task (generate the tone)
 	
 	os_tsk_delete_self ();
 }
@@ -173,9 +183,6 @@ int main (void) {
   initOutputLeds();
 	initOutputTone();
   initInputButton();
-	
-	// Initialize TMP0 as PWM
-	initTPM0PWM();
 	
 	// Initialize RTX and start init
   os_sys_init(boot);

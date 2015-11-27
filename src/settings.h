@@ -5,14 +5,13 @@
 #define TOTAL_TASKS 3
 enum {
 	T_LEDS,
-	T_PWM,
-	T_TIMER,
+	T_TOOGLER,
+	T_TONE
 };
 
 // Timeout configurations
-#define OS_TICK          1000 // 1ms (1us)
-#define LED_TIMEOUT      3000 // 3000ms
-#define DEBOUNCE_TIMEOUT 200  // 200ms
+#define LED_TIMEOUT      30000 // 3000ms
+#define DEBOUNCE_TIMEOUT 2000  // 200ms
 #define TIMER_TIMEOUT    1    // 1ms (1Hz Tone)
 
 // Definitions (ENUMS and DEFINES)

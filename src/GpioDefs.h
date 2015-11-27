@@ -13,13 +13,14 @@
 // Button is on port D, pin 6
 #define BUTTON_POS (6)
 
-#define OSCIL_POS (8) // PTB8
-
 // LED states
 #define LED_ON (1)
 #define LED_OFF (0)
 
 // External o/p for TONE: Port A, pin 2
 #define TONE_POS (2)
+
+// Tone ON/OFF control
+#define TONE_TOOGLE_POS (8) // Port B, pin 8
 
 #endif
