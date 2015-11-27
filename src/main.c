@@ -74,6 +74,14 @@ void PORTD_IRQHandler(void) {
 		// Ok to clear all since this handler is for all of Port D
 }
 
+RearBoxStates getGearboxState(buttonState) {
+	if (buttonState == OS_R_EVT && state == REAR_BOX_DISENGAGED) {
+		return REAR_BOX_ENGAGED;
+	}
+	else if (buttonState == OS_R_EVT && state == REAR_BOX_ENGAGED) {
+		return REAR_BOX_DISENGAGED;
+	}
+}
 
 // Task to feedback user click with LEDs
 __task void ledFeedbackTask(void) {
@@ -126,11 +134,23 @@ __task void btnEventManagerTask(void) {
 
 // Generate a square wave
 __task void toneGeneratorTask(void) {
-	unsigned short state;
+	RearBoxStates state;
+	int buttonPressed;
 	
 	while(1) {
-		PTB->PTOR |= MASK(TONE_TOOGLE_POS);
-		os_dly_wait(1);
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 1); 
+		state = getGearboxState(buttonPressed);
+
+		switch (state) {
+			case REAR_BOX_DISENGAGED:
+				// Turn the square wave generator off
+				PTB->PSOR = MASK(TONE_POS);
+				break;
+			case REAR_BOX_ENGAGED:
+				// Toogle the port to generate the square wave
+				PTB->PTOR |= MASK(TONE_POS);
+				break;
+		}
 		
 		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_TONE]);
 	}
@@ -139,74 +159,80 @@ __task void toneGeneratorTask(void) {
 // Toogle on/off the generate square wave
 int voltageState;
 __task void toogleToneTask(void) {
-	unsigned short state;
+	RearBoxStates state;
 	int timeout = 1000;
 	int buttonPressed;
 	
 	while(1) {
-		// buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);  // wait for an event flag 0x0001
-		/* 
-		TODO: 
-		- The buttonPressed will start/stop the toogleTone generator (when the rear gear is engaged or not)
-		- When it is ON, it have to read the variable from the parkingSensorTask somehow (check data racing)
-		- Encode the data from the parking sensor (IR Sensor) at the IF below
-		- Implement it as a state flow (get out from the draft)
-		*/
-		
-		// if (buttonPressed == OS_R_EVT) {
-		// 	if (timeout > 100)
-		// 		timeout = timeout - 100;
-		// 	else
-		// 		timeout = 1000;
-		// }
-		timeout = voltageState * 50;
-		
-		PTA->PTOR |= MASK(TONE_POS);
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
+		state = getGearboxState(buttonPressed);
+
+		switch (state) {
+			case REAR_BOX_DISENGAGED:
+				// Turn the toogler off
+				PTB->PSOR = MASK(TONE_TOOGLE_POS);
+				break;
+			case REAR_BOX_ENGAGED:
+				// Toogle the port and specify the timeout of the toogler
+				timeout = voltageState * 50;
+				PTA->PTOR |= MASK(TONE_TOOGLE_POS);
+				break;
+		}
 		
 		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_TOOGLER]);
 	}
 }
 
 __task void parkingSensorAcquireTask(void) {
-	unsigned short state;
+	RearBoxStates state;
 	float measuredVoltage;  // scaled value
 
 	while(1) {
-		// Take 5 voltage readings
-		int i ;
-		res = 0 ;
-		for (i = 0; i < 5; i++) { 
-			// measure the voltage
-			res = res + measureVoltage();
-		}
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
+		state = getGearboxState(buttonPressed);
 
-		// Scale to an actual voltage, assuming VREF accurate
-		measuredVoltage = (VREF * res) / (ADCRANGE * 5);
+		switch(state) {
+			case REAR_BOX_DISENGAGED:
+				break;
+			case REAR_BOX_ENGAGED:
+				// Take 5 voltage readings
+				int i ;
+				res = 0 ;
+				for (i = 0; i < 5; i++) { 
+					// measure the voltage
+					res = res + measureVoltage();
+				}
 
-		// Set the voltage state
-		if ( measuredVoltage < (VREF/8) ) {
-			voltageState = 0;
-		}
-		else if ( measuredVoltage < (2*VREF/8) ) {
-			voltageState = 1;
-		}
-		else if ( measuredVoltage < (3*VREF/8) ) {
-			voltageState = 2;
-		}
-		else if ( measuredVoltage < (4*VREF/8) ) {
-			voltageState = 3;
-		}
-		else if ( measuredVoltage < (5*VREF/8) ) {
-			voltageState = 4;
-		}
-		else if ( measuredVoltage < (6*VREF/8) ) {
-			voltageState = 5;
-		}
-		else if ( measuredVoltage < (7*VREF/8) ) {
-			voltageState = 6;
-		}
-		else {
-			voltageState = 7;
+				// Scale to an actual voltage, assuming VREF accurate
+				measuredVoltage = (VREF * res) / (ADCRANGE * 5);
+
+				// Set the voltage state
+				if ( measuredVoltage < (VREF/8) ) {
+					voltageState = 0;
+				}
+				else if ( measuredVoltage < (2*VREF/8) ) {
+					voltageState = 1;
+				}
+				else if ( measuredVoltage < (3*VREF/8) ) {
+					voltageState = 2;
+				}
+				else if ( measuredVoltage < (4*VREF/8) ) {
+					voltageState = 3;
+				}
+				else if ( measuredVoltage < (5*VREF/8) ) {
+					voltageState = 4;
+				}
+				else if ( measuredVoltage < (6*VREF/8) ) {
+					voltageState = 5;
+				}
+				else if ( measuredVoltage < (7*VREF/8) ) {
+					voltageState = 6;
+				}
+				else {
+					voltageState = 7;
+				}
+
+				break;
 		}
 	}
 }
