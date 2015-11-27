@@ -1,14 +1,14 @@
 /*----------------------------------------------------------------------------
-    Code for Lab 6
+	Code for Lab 6
 
-    In this project
+	In this project
 		   - the red light flashes on a periodically 
 			 - pressing the button toggles the green light
 		There are two tasks
-       t_button: receives an event from the button ISR, and toggles green
-       t_led: switches the red on and off, using a delay
+	   t_button: receives an event from the button ISR, and toggles green
+	   t_led: switches the red on and off, using a delay
 
-    REQUIRED CHANGES
+	REQUIRED CHANGES
 		Change the program so that 
 		   1. The leds flash: red/green/blue with each on for 3sec
 		   2. Pressing the button stops the fashing; the next press restarts it
@@ -19,8 +19,10 @@
 #include <RTL.h>
 #include <MKL25Z4.H>
 #include "GpioDefs.h"
+#include "AdcDefs.h"
 #include "Settings.h"
 #include "Leds.h"
+#include "Adc.h"
 
 OS_TID t_evt_mngr;
 OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
@@ -46,14 +48,6 @@ void initOutputTone() {
 	PTB->PCOR |= MASK(TONE_TOOGLE_POS) ;
 }
 
-/*----------------------------------------------------------------------------
-  GPIO Input Configuration
-
-  Initialse a Port D pin as an input, with
-    - a pullup resistor 
-		- an interrupt on the falling edge
-  Bit number given by BUTTON_POS - bit 6, corresponding to J2, pin 14
- *----------------------------------------------------------------------------*/
 void initInputButton(void) {
 	SIM->SCGC5 |=  SIM_SCGC5_PORTD_MASK; /* enable clock for port D */
 
@@ -70,11 +64,6 @@ void initInputButton(void) {
 	NVIC_EnableIRQ(PORTD_IRQn);
 }
 
-/*----------------------------------------------------------------------------
- * Interrupt Handler
- *    - Clear the pending request
- *    - Test the bit for pin 6 to see if it generated the interrupt 
-  ---------------------------------------------------------------------------- */
 void PORTD_IRQHandler(void) {  
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
@@ -82,30 +71,30 @@ void PORTD_IRQHandler(void) {
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
-	    // Ok to clear all since this handler is for all of Port D
+		// Ok to clear all since this handler is for all of Port D
 }
 
 
 // Task to feedback user click with LEDs
 __task void ledFeedbackTask(void) {
-	int ledColor = COLOR_RED;
+	int state = COLOR_RED;
 	greenLEDOnOff(LED_OFF);
 	
 	while(1) {
 		// Wait for the user click
 		os_evt_wait_and (EVT_BTN_PRESSED, 0xFFFF);
-		switch (ledColor) {
+		switch (state) {
 			case COLOR_RED:
 				redLEDOnOff   (LED_ON);
 				blueLEDOnOff  (LED_OFF);
 				
-				ledColor = COLOR_BLUE;
+				state = COLOR_BLUE;
 				break;
 			case COLOR_BLUE:
 				redLEDOnOff  (LED_OFF);
 				blueLEDOnOff (LED_ON);
 				
-				ledColor = COLOR_RED;
+				state = COLOR_RED;
 				break;
 		}
 		
@@ -113,9 +102,6 @@ __task void ledFeedbackTask(void) {
 		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_LEDS]);
 	}
 }
-
-
-
 
 // Button Event Manager Task
 __task void btnEventManagerTask(void) {
@@ -138,8 +124,10 @@ __task void btnEventManagerTask(void) {
 	}
 }
 
+// Generate a square wave
 __task void toneGeneratorTask(void) {
-	// Generate a square wave
+	unsigned short state;
+	
 	while(1) {
 		PTB->PTOR |= MASK(TONE_TOOGLE_POS);
 		os_dly_wait(1);
@@ -148,12 +136,15 @@ __task void toneGeneratorTask(void) {
 	}
 }
 
+// Toogle on/off the generate square wave
+int voltageState;
 __task void toogleToneTask(void) {
+	unsigned short state;
 	int timeout = 1000;
 	int buttonPressed;
 	
 	while(1) {
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);  // wait for an event flag 0x0001
+		// buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);  // wait for an event flag 0x0001
 		/* 
 		TODO: 
 		- The buttonPressed will start/stop the toogleTone generator (when the rear gear is engaged or not)
@@ -162,12 +153,13 @@ __task void toogleToneTask(void) {
 		- Implement it as a state flow (get out from the draft)
 		*/
 		
-		if (buttonPressed == OS_R_EVT) {
-			if (timeout > 100)
-				timeout = timeout - 100;
-			else
-				timeout = 1000;
-		}
+		// if (buttonPressed == OS_R_EVT) {
+		// 	if (timeout > 100)
+		// 		timeout = timeout - 100;
+		// 	else
+		// 		timeout = 1000;
+		// }
+		timeout = voltageState * 50;
 		
 		PTA->PTOR |= MASK(TONE_POS);
 		
@@ -175,22 +167,68 @@ __task void toogleToneTask(void) {
 	}
 }
 
+__task void parkingSensorAcquireTask(void) {
+	unsigned short state;
+	float measuredVoltage;  // scaled value
+
+	while(1) {
+		// Take 5 voltage readings
+		int i ;
+		res = 0 ;
+		for (i = 0; i < 5; i++) { 
+			// measure the voltage
+			res = res + measureVoltage();
+		}
+
+		// Scale to an actual voltage, assuming VREF accurate
+		measuredVoltage = (VREF * res) / (ADCRANGE * 5);
+
+		// Set the voltage state
+		if ( measuredVoltage < (VREF/8) ) {
+			voltageState = 0;
+		}
+		else if ( measuredVoltage < (2*VREF/8) ) {
+			voltageState = 1;
+		}
+		else if ( measuredVoltage < (3*VREF/8) ) {
+			voltageState = 2;
+		}
+		else if ( measuredVoltage < (4*VREF/8) ) {
+			voltageState = 3;
+		}
+		else if ( measuredVoltage < (5*VREF/8) ) {
+			voltageState = 4;
+		}
+		else if ( measuredVoltage < (6*VREF/8) ) {
+			voltageState = 5;
+		}
+		else if ( measuredVoltage < (7*VREF/8) ) {
+			voltageState = 6;
+		}
+		else {
+			voltageState = 7;
+		}
+	}
+}
+
 __task void boot (void) {
   t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);   // start button task
 	
-	t_tasks[T_LEDS]    = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
-	t_tasks[T_TOOGLER] = os_tsk_create (toogleToneTask, 0);  // start timer task (generate the tone)
-	t_tasks[T_TONE]    = os_tsk_create (toneGeneratorTask, 0);        // start timer task (generate the tone)
+	t_tasks[T_LEDS]    = os_tsk_create (ledFeedbackTask, 0);          // start led task (only user feedback)
+	t_tasks[T_TONE]    = os_tsk_create (toneGeneratorTask, 0);        // start tone task (generate the tone)
+	t_tasks[T_TOOGLER] = os_tsk_create (toogleToneTask, 0);           // start toogler task (toogle the tone)
+	t_tasks[T_SENSOR]  = os_tsk_create (parkingSensorAcquireTask, 0); // start sensor task (data acquisition)
 	
 	os_tsk_delete_self ();
 }
 
 int main (void) {
 	// Initialize input and outputs
-  initOutputLeds();
+	initOutputLeds();
 	initOutputTone();
-  initInputButton();
+	initInputButton();
+	initAdc();
 	
 	// Initialize RTX and start init
-  os_sys_init(boot);
+	os_sys_init(boot);
 }

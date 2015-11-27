@@ -2,11 +2,12 @@
 #define SETTINGS_H
 
 // Tasks configurations
-#define TOTAL_TASKS 3
+#define TOTAL_TASKS 4
 enum {
 	T_LEDS,
+    T_TONE,
 	T_TOOGLER,
-	T_TONE
+    T_SENSOR
 };
 
 // Timeout configurations
@@ -15,19 +16,20 @@ enum {
 #define TIMER_TIMEOUT    1    // 1ms (1Hz Tone)
 
 // Definitions (ENUMS and DEFINES)
-enum {
-	LED_BLINKING,
-	LED_NOT_BLINKING
-};
-
-enum {
+#define TOTAL_EVENTS 1
+typedef enum {
 	EVT_BTN_PRESSED = 1
-};
+} Events;
 
-enum {
+typedef enum {
 	COLOR_RED,
 	COLOR_GREEN,
 	COLOR_BLUE
-};
+} LedStates;
+
+typedef enum {
+    REAR_BOX_DISENGAGED,
+    REAR_BOX_ENGAGED,
+} RearBoxStates;
 
 #endif
