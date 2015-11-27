@@ -20,7 +20,6 @@
 #include <MKL25Z4.H>
 #include "GpioDefs.h"
 #include "Settings.h"
-#include "Pwm.h"
 #include "Leds.h"
 
 OS_TID t_evt_mngr;
@@ -128,6 +127,7 @@ __task void btnEventManagerTask(void) {
 		
 		// Propagate the event through all listeners
 		for(i=0; i<TOTAL_TASKS;i++) {
+			// TODO: Check if it is 0... If is not, then send the event
 			os_evt_set (EVT_BTN_PRESSED, t_tasks[i]);
 		}
 		// Wait some time to debounce the buton
@@ -138,8 +138,8 @@ __task void btnEventManagerTask(void) {
 	}
 }
 
-__task void toneTask(void) {
-	// Generate a square wave of 50 Hz (1ms tick, 2ms period)
+__task void toneGeneratorTask(void) {
+	// Generate a square wave
 	while(1) {
 		PTB->PTOR |= MASK(TONE_TOOGLE_POS);
 		os_dly_wait(1);
@@ -154,6 +154,13 @@ __task void toogleToneTask(void) {
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);  // wait for an event flag 0x0001
+		/* 
+		TODO: 
+		- The buttonPressed will start/stop the toogleTone generator (when the rear gear is engaged or not)
+		- When it is ON, it have to read the variable from the parkingSensorTask somehow (check data racing)
+		- Encode the data from the parking sensor (IR Sensor) at the IF below
+		- Implement it as a state flow (get out from the draft)
+		*/
 		
 		if (buttonPressed == OS_R_EVT) {
 			if (timeout > 100)
@@ -173,7 +180,7 @@ __task void boot (void) {
 	
 	t_tasks[T_LEDS]    = os_tsk_create (ledFeedbackTask, 0); // start led task (only user feedback)
 	t_tasks[T_TOOGLER] = os_tsk_create (toogleToneTask, 0);  // start timer task (generate the tone)
-	t_tasks[T_TONE]    = os_tsk_create (toneTask, 0);        // start timer task (generate the tone)
+	t_tasks[T_TONE]    = os_tsk_create (toneGeneratorTask, 0);        // start timer task (generate the tone)
 	
 	os_tsk_delete_self ();
 }
