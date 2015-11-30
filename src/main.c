@@ -22,7 +22,7 @@
 #include "AdcDefs.h"
 #include "Settings.h"
 #include "Leds.h"
-#include "Adc.h"
+#include "AdcDefs.h"
 
 OS_TID t_evt_mngr;
 OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
@@ -71,19 +71,23 @@ void PORTD_IRQHandler(void) {
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
-		// Ok to clear all since this handler is for all of Port D
+	// Ok to clear all since this handler is for all of Port D
 }
 
-RearBoxStates getGearboxState(buttonState) {
-	if (buttonState == OS_R_EVT && state == REAR_BOX_DISENGAGED) {
-		return REAR_BOX_ENGAGED;
+RearBoxStates getGearboxState(int buttonState, RearBoxStates gearState) {
+	if (buttonState == OS_R_EVT && gearState == REAR_BOX_DISENGAGED) {
+		gearState = REAR_BOX_ENGAGED;
 	}
-	else if (buttonState == OS_R_EVT && state == REAR_BOX_ENGAGED) {
-		return REAR_BOX_DISENGAGED;
+	else if (buttonState == OS_R_EVT && gearState == REAR_BOX_ENGAGED) {
+		gearState = REAR_BOX_DISENGAGED;
 	}
+	
+	return gearState;
 }
 
 int encodeSensorVoltage(float measuredVoltage) {
+	int voltageState;
+	
 	if ( measuredVoltage < (VREF/8) ) {
 		voltageState = 0;
 	}
@@ -168,7 +172,7 @@ __task void toneGeneratorTask(void) {
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 1); 
-		state = getGearboxState(buttonPressed);
+		state = getGearboxState(buttonPressed, state);
 
 		switch (state) {
 			case REAR_BOX_DISENGAGED:
@@ -194,7 +198,7 @@ __task void toogleToneTask(void) {
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
-		state = getGearboxState(buttonPressed);
+		state = getGearboxState(buttonPressed, state);
 
 		switch (state) {
 			case REAR_BOX_DISENGAGED:
@@ -215,18 +219,20 @@ __task void toogleToneTask(void) {
 __task void parkingSensorAcquireTask(void) {
 	RearBoxStates state;
 	float measuredVoltage;  // scaled value
+	int buttonPressed;
 
+	int i;
+	int res = 0;
+	
 	while(1) {
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
-		state = getGearboxState(buttonPressed);
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 20);
+		state = getGearboxState(buttonPressed, state);
 
 		switch(state) {
 			case REAR_BOX_DISENGAGED:
 				break;
 			case REAR_BOX_ENGAGED:
 				// Take 5 voltage readings
-				int i ;
-				int res = 0 ;
 				for (i = 0; i < 5; i++) { 
 					// measure the voltage
 					res = res + measureVoltage();
