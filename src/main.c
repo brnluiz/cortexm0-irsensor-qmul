@@ -177,11 +177,11 @@ __task void toneGeneratorTask(void) {
 		switch (state) {
 			case REAR_BOX_DISENGAGED:
 				// Turn the square wave generator off
-				PTB->PSOR = MASK(TONE_POS);
+				PTA->PSOR = MASK(TONE_POS);
 				break;
 			case REAR_BOX_ENGAGED:
 				// Toogle the port to generate the square wave
-				PTB->PTOR |= MASK(TONE_POS);
+				PTA->PTOR |= MASK(TONE_POS);
 				break;
 		}
 		
@@ -208,7 +208,7 @@ __task void toogleToneTask(void) {
 			case REAR_BOX_ENGAGED:
 				// Toogle the port and specify the timeout of the toogler
 				timeout = voltageState * 50;
-				PTA->PTOR |= MASK(TONE_TOOGLE_POS);
+				PTB->PTOR |= MASK(TONE_TOOGLE_POS);
 				break;
 		}
 		
