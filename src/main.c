@@ -145,18 +145,23 @@ __task void ledFeedbackTask(void) {
 }
 
 // Button Event Manager Task
+RearBoxStates gearBoxState;
 __task void btnEventManagerTask(void) {
 	int i = 0;
+	int buttonPressed;
 
 	while(1) {
 		// Wait until button is pressed
-		os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
 		
 		// Propagate the event through all listeners
 		for(i=0; i<TOTAL_TASKS;i++) {
 			// TODO: Check if it is 0... If is not, then send the event
 			os_evt_set (EVT_BTN_PRESSED, t_tasks[i]);
 		}
+		
+		gearBoxState = getGearboxState(buttonPressed, gearBoxState);
+		
 		// Wait some time to debounce the buton
 		os_dly_wait(DEBOUNCE_TIMEOUT);
 		
@@ -167,14 +172,13 @@ __task void btnEventManagerTask(void) {
 
 // Generate a square wave
 __task void toneGeneratorTask(void) {
-	RearBoxStates state;
+	RearBoxStates state = REAR_BOX_DISENGAGED;
 	int buttonPressed;
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 1); 
-		state = getGearboxState(buttonPressed, state);
 
-		switch (state) {
+		switch (gearBoxState) {
 			case REAR_BOX_DISENGAGED:
 				// Turn the square wave generator off
 				PTA->PSOR = MASK(TONE_POS);
@@ -192,22 +196,21 @@ __task void toneGeneratorTask(void) {
 // Toogle on/off the generate square wave
 int voltageState;
 __task void toogleToneTask(void) {
-	RearBoxStates state;
+	RearBoxStates state = REAR_BOX_DISENGAGED;
 	int timeout = 1000;
 	int buttonPressed;
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
-		state = getGearboxState(buttonPressed, state);
 
-		switch (state) {
+		switch (gearBoxState) {
 			case REAR_BOX_DISENGAGED:
 				// Turn the toogler off
 				PTB->PSOR = MASK(TONE_TOOGLE_POS);
 				break;
 			case REAR_BOX_ENGAGED:
 				// Toogle the port and specify the timeout of the toogler
-				timeout = voltageState * 50;
+				timeout = 50 * voltageState;
 				PTB->PTOR |= MASK(TONE_TOOGLE_POS);
 				break;
 		}
@@ -217,7 +220,7 @@ __task void toogleToneTask(void) {
 }
 
 __task void parkingSensorAcquireTask(void) {
-	RearBoxStates state;
+	RearBoxStates state = REAR_BOX_DISENGAGED;
 	float measuredVoltage;  // scaled value
 	int buttonPressed;
 
@@ -226,9 +229,8 @@ __task void parkingSensorAcquireTask(void) {
 	
 	while(1) {
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 20);
-		state = getGearboxState(buttonPressed, state);
 
-		switch(state) {
+		switch(gearBoxState) {
 			case REAR_BOX_DISENGAGED:
 				break;
 			case REAR_BOX_ENGAGED:
