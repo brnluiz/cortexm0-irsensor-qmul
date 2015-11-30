@@ -466,6 +466,16 @@
               <FileType>5</FileType>
               <FilePath>.\src\Settings.h</FilePath>
             </File>
+            <File>
+              <FileName>AdcDefs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\AdcDefs.h</FilePath>
+            </File>
+            <File>
+              <FileName>Adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Adc.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -939,6 +949,16 @@
               <FileName>Settings.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\Settings.h</FilePath>
+            </File>
+            <File>
+              <FileName>AdcDefs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\AdcDefs.h</FilePath>
+            </File>
+            <File>
+              <FileName>Adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\Adc.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -23,4 +23,5 @@
 // Tone ON/OFF control
 #define TONE_TOOGLE_POS (8) // Port B, pin 8
 
+#define IR_TX_POS (1) // Port A, pin 1
 #endif

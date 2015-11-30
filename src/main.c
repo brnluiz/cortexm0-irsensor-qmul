@@ -35,16 +35,19 @@ void initOutputTone() {
 	// Make the pin as GPIO
 	PORTA->PCR[TONE_POS] &= ~PORT_PCR_MUX_MASK;
 	PORTA->PCR[TONE_POS] |= PORT_PCR_MUX(1);
-	
+	PORTA->PCR[IR_TX_POS] &= ~PORT_PCR_MUX_MASK;
+	PORTA->PCR[IR_TX_POS] |= PORT_PCR_MUX(1);
 	PORTB->PCR[TONE_TOOGLE_POS] &= ~PORT_PCR_MUX_MASK;
 	PORTB->PCR[TONE_TOOGLE_POS] |= PORT_PCR_MUX(1);
 	
 	// Set ports to outputs
 	PTA->PDDR |= MASK(TONE_POS) ;
+	PTA->PDDR |= MASK(IR_TX_POS) ;
 	PTB->PDDR |= MASK(TONE_TOOGLE_POS) ;
 	
 	// Turn off
 	PTA->PCOR |= MASK(TONE_POS) ;
+	PTA->PCOR |= MASK(IR_TX_POS) ;
 	PTB->PCOR |= MASK(TONE_TOOGLE_POS) ;
 }
 
@@ -172,7 +175,6 @@ __task void btnEventManagerTask(void) {
 
 // Generate a square wave
 __task void toneGeneratorTask(void) {
-	RearBoxStates state = REAR_BOX_DISENGAGED;
 	int buttonPressed;
 	
 	while(1) {
@@ -196,7 +198,6 @@ __task void toneGeneratorTask(void) {
 // Toogle on/off the generate square wave
 int voltageState;
 __task void toogleToneTask(void) {
-	RearBoxStates state = REAR_BOX_DISENGAGED;
 	int timeout = 1000;
 	int buttonPressed;
 	
@@ -219,8 +220,15 @@ __task void toogleToneTask(void) {
 	}
 }
 
+void IrTxOnOff (unsigned short onOff) {
+	if (onOff == 1) {
+		PTA->PCOR = MASK(IR_TX_POS) ;
+	} else {
+		PTA->PSOR = MASK(IR_TX_POS) ;
+	}
+}
+
 __task void parkingSensorAcquireTask(void) {
-	RearBoxStates state = REAR_BOX_DISENGAGED;
 	float measuredVoltage;  // scaled value
 	int buttonPressed;
 
@@ -234,10 +242,14 @@ __task void parkingSensorAcquireTask(void) {
 			case REAR_BOX_DISENGAGED:
 				break;
 			case REAR_BOX_ENGAGED:
+			
 				// Take 5 voltage readings
 				for (i = 0; i < 5; i++) { 
+					IrTxOnOff(1);
+					os_dly_wait(5);
 					// measure the voltage
 					res = res + measureVoltage();
+					IrTxOnOff(0);
 				}
 
 				// Scale to an actual voltage, assuming VREF accurate
