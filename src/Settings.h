@@ -10,6 +10,11 @@ enum {
     T_SENSOR
 };
 
+enum {
+	OFF,
+	ON
+};
+
 // Timeout configurations
 #define LED_TIMEOUT      30000 // 3000ms
 #define DEBOUNCE_TIMEOUT 2000  // 200ms

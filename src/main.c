@@ -90,30 +90,31 @@ RearBoxStates getGearboxState(int buttonState, RearBoxStates gearState) {
 
 int encodeSensorVoltage(float measuredVoltage) {
 	int voltageState;
+	int commonDivisor = 64;
 	
-	if ( measuredVoltage < (VREF/8) ) {
-		voltageState = 0;
+	if ( measuredVoltage < (VREF/commonDivisor) ) {
+		voltageState = 30;
 	}
-	else if ( measuredVoltage < (2*VREF/8) ) {
-		voltageState = 1;
+	else if ( measuredVoltage < (2*VREF/commonDivisor) ) {
+		voltageState = 26;
 	}
-	else if ( measuredVoltage < (3*VREF/8) ) {
-		voltageState = 2;
+	else if ( measuredVoltage < (3*VREF/commonDivisor) ) {
+		voltageState = 22;
 	}
-	else if ( measuredVoltage < (4*VREF/8) ) {
-		voltageState = 3;
+	else if ( measuredVoltage < (4*VREF/commonDivisor) ) {
+		voltageState = 18;
 	}
-	else if ( measuredVoltage < (5*VREF/8) ) {
-		voltageState = 4;
+	else if ( measuredVoltage < (5*VREF/commonDivisor) ) {
+		voltageState = 14;
 	}
-	else if ( measuredVoltage < (6*VREF/8) ) {
-		voltageState = 5;
+	else if ( measuredVoltage < (6*VREF/commonDivisor) ) {
+		voltageState = 10;
 	}
-	else if ( measuredVoltage < (7*VREF/8) ) {
+	else if ( measuredVoltage < (7*VREF/commonDivisor) ) {
 		voltageState = 6;
 	}
 	else {
-		voltageState = 7;
+		voltageState = 2;
 	}
 
 	return voltageState;
@@ -175,10 +176,9 @@ __task void btnEventManagerTask(void) {
 
 // Generate a square wave
 __task void toneGeneratorTask(void) {
-	int buttonPressed;
 	
 	while(1) {
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 1); 
+		os_evt_wait_and (EVT_BTN_PRESSED, 1); 
 
 		switch (gearBoxState) {
 			case REAR_BOX_DISENGAGED:
@@ -199,10 +199,10 @@ __task void toneGeneratorTask(void) {
 int voltageState;
 __task void toogleToneTask(void) {
 	int timeout = 1000;
-	int buttonPressed;
+	int state = 0;
 	
 	while(1) {
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, timeout);
+		os_evt_wait_and (EVT_BTN_PRESSED, timeout);
 
 		switch (gearBoxState) {
 			case REAR_BOX_DISENGAGED:
@@ -210,8 +210,7 @@ __task void toogleToneTask(void) {
 				PTB->PSOR = MASK(TONE_TOOGLE_POS);
 				break;
 			case REAR_BOX_ENGAGED:
-				// Toogle the port and specify the timeout of the toogler
-				timeout = 50 * voltageState;
+				timeout = 100 * voltageState;
 				PTB->PTOR |= MASK(TONE_TOOGLE_POS);
 				break;
 		}
@@ -229,31 +228,33 @@ void IrTxOnOff (unsigned short onOff) {
 }
 
 __task void parkingSensorAcquireTask(void) {
-	float measuredVoltage;  // scaled value
-	int buttonPressed;
-
-	int i;
-	int res = 0;
 	
 	while(1) {
-		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, 20);
+		float measuredVoltage = 0;  // scaled value
+		unsigned measureOn = 0, measureOff = 0, measureTotal = 0;
+		int i = 0;
+		
+		os_evt_wait_and (EVT_BTN_PRESSED, 20);
 
 		switch(gearBoxState) {
 			case REAR_BOX_DISENGAGED:
 				break;
 			case REAR_BOX_ENGAGED:
 			
-				// Take 5 voltage readings
-				for (i = 0; i < 5; i++) { 
-					IrTxOnOff(1);
-					os_dly_wait(5);
+				for (i = 0; i < 5; i++) {
+					IrTxOnOff(OFF);
+					os_dly_wait(3);
 					// measure the voltage
-					res = res + measureVoltage();
-					IrTxOnOff(0);
+					measureOn = measureVoltage();
+					
+					IrTxOnOff(ON);
+					os_dly_wait(3);
+					measureOff = measureVoltage();
+					measureTotal = measureTotal + (measureOn - measureOff);
 				}
 
 				// Scale to an actual voltage, assuming VREF accurate
-				measuredVoltage = (VREF * res) / (ADCRANGE * 5);
+				measuredVoltage = (VREF * measureTotal) / (ADCRANGE * 5);
 
 				// Encode the measured voltage to a state
 				voltageState = encodeSensorVoltage(measuredVoltage);
